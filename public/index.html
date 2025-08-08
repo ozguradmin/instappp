@@ -50,13 +50,14 @@
       }
 
       async function fetchJsonWithFallback(path, options) {
-        const first = await fetch(`/api${path}`, options);
-        if (first.ok) return { resp: first, data: await first.json() };
-        if (first.status === 404) {
-          const second = await fetch(`/.netlify/functions/api${path}`, options);
-          return { resp: second, data: await second.json() };
+        const base = apiBase();
+        const primary = await fetch(`${base}${path}`, options);
+        if (primary.ok) return { resp: primary, data: await primary.json() };
+        if (base !== '/.netlify/functions/api' && primary.status === 404) {
+          const secondary = await fetch(`/.netlify/functions/api${path}`, options);
+          return { resp: secondary, data: await secondary.json() };
         }
-        return { resp: first, data: await first.json().catch(() => ({})) };
+        return { resp: primary, data: await primary.json().catch(() => ({})) };
       }
       const form = document.getElementById('form');
       const usernameEl = document.getElementById('username');
