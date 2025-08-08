@@ -235,7 +235,7 @@ apiApp.post('/profile-photos', async (req, res) => {
       usernames = raw.map((x) => normalizeInstagramUsername(String(x))).filter(Boolean);
     } else if (typeof raw === 'string') {
       usernames = raw
-        .split(',')
+        .split(/[\s,;]+/)
         .map((s) => normalizeInstagramUsername(s))
         .filter(Boolean);
     } else {

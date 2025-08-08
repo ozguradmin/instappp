@@ -99,10 +99,11 @@
         copyBtn.disabled = true;
         bulkOutput.textContent = 'İşleniyor... (liste uzunluğuna göre sürebilir)';
         try {
+          const body = /[,;\s]/.test(text) ? { usernames: text } : { usernames: [text] };
           const { resp, data } = await fetchJsonWithFallback('/profile-photos', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ usernames: text })
+            body: JSON.stringify(body)
           });
           if (!resp.ok) throw new Error(data.error || 'Hata');
           const formatted = JSON.stringify(data, null, 2);
