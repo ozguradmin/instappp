@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Instagram Profil Fotoğrafı Getirici</title>
+    <style>
+      :root { color-scheme: light dark; }
+      body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 0; padding: 24px; display: grid; place-items: start center; gap: 24px; }
+      .card { width: min(680px, 92vw); background: canvas; border: 1px solid color-mix(in oklab, canvastext 15%, transparent); border-radius: 12px; padding: 20px; box-shadow: 0 6px 24px rgba(0,0,0,0.08); }
+      h1 { margin: 0 0 12px; font-weight: 700; font-size: 22px; }
+      form { display: flex; gap: 8px; }
+      input { flex: 1; padding: 12px 14px; border: 1px solid color-mix(in oklab, canvastext 20%, transparent); border-radius: 10px; font-size: 15px; }
+      button { padding: 12px 16px; border: 0; background: #0ea5e9; color: white; border-radius: 10px; font-weight: 600; cursor: pointer; }
+      button:disabled { opacity: .6; cursor: not-allowed; }
+      .result { margin-top: 16px; display: grid; gap: 12px; }
+      .img-wrap { display: grid; place-items: center; background: color-mix(in oklab, canvastext 3%, transparent); border: 1px dashed color-mix(in oklab, canvastext 18%, transparent); border-radius: 12px; padding: 16px; }
+      img { max-width: 100%; height: auto; border-radius: 12px; }
+      .error { color: #dc2626; font-weight: 600; }
+      .hint { color: color-mix(in oklab, canvastext 45%, transparent); font-size: 13px; }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h1>Instagram Profil Fotoğrafı Çek</h1>
+      <form id="form">
+        <input id="username" placeholder="kullanıcı adı (örn: instagram)" required />
+        <button id="submit" type="submit">Getir</button>
+      </form>
+      <div class="hint">Kullanıcı gizli ise veya Instagram sayfa yapısı değiştiyse sonuç alınamayabilir. Çıkan görsel sunucu üzerinden proxy'lenir.</div>
+      <div class="result" id="result"></div>
+      <hr style="margin:20px 0; opacity:.3;"/>
+      <h2 style="margin:0 0 8px; font-size:18px;">Toplu Çek</h2>
+      <div class="hint">Virgül ile ayır: örn. ozguradmin, merhaba321, kullanici2</div>
+      <textarea id="bulkInput" rows="6" style="width:100%; margin-top:8px; padding:12px 14px; border:1px solid color-mix(in oklab, canvastext 20%, transparent); border-radius:10px; font-size:14px;" placeholder="kullanici1, kullanici2, ..."></textarea>
+      <div style="display:flex; gap:8px; margin-top:8px;">
+        <button id="bulkBtn" type="button">Toplu Getir</button>
+        <button id="copyBtn" type="button" disabled>Kopyala</button>
+      </div>
+      <pre id="bulkOutput" style="white-space:pre-wrap; background: color-mix(in oklab, canvastext 3%, transparent); border:1px dashed color-mix(in oklab, canvastext 18%, transparent); border-radius:12px; padding:12px; margin-top:12px; max-height:360px; overflow:auto;"></pre>
+    </div>
+
+    <script>
+      const form = document.getElementById('form');
+      const usernameEl = document.getElementById('username');
+      const result = document.getElementById('result');
+      const submit = document.getElementById('submit');
+      const bulkInput = document.getElementById('bulkInput');
+      const bulkBtn = document.getElementById('bulkBtn');
+      const copyBtn = document.getElementById('copyBtn');
+      const bulkOutput = document.getElementById('bulkOutput');
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const username = usernameEl.value.trim();
+        if (!username) return;
+        submit.disabled = true;
+        result.innerHTML = 'Yükleniyor...';
+        try {
+          const resp = await fetch(`/api/profile-photo?username=${encodeURIComponent(username)}`);
+          const data = await resp.json();
+          if (!resp.ok) throw new Error(data.error || 'Hata');
+          const proxyUrl = `/api/profile-photo/image?username=${encodeURIComponent(username)}`;
+          result.innerHTML = `
+            <div>Görsel (proxy üzerinden):</div>
+            <a href="${proxyUrl}" target="_blank" rel="noopener">Görseli aç</a>
+            <div class="img-wrap"><img src="${proxyUrl}" alt="${username} profil fotoğrafı" /></div>
+          `;
+        } catch (err) {
+          result.innerHTML = `<div class="error">${err.message}</div>`;
+        } finally {
+          submit.disabled = false;
+        }
+      });
+
+      bulkBtn.addEventListener('click', async () => {
+        const text = bulkInput.value.trim();
+        if (!text) {
+          bulkOutput.textContent = 'Lütfen kullanıcı adlarını virgülle ayırarak girin.';
+          return;
+        }
+        bulkBtn.disabled = true;
+        copyBtn.disabled = true;
+        bulkOutput.textContent = 'İşleniyor... (liste uzunluğuna göre sürebilir)';
+        try {
+          const resp = await fetch('/api/profile-photos', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ usernames: text })
+          });
+          const data = await resp.json();
+          if (!resp.ok) throw new Error(data.error || 'Hata');
+          const formatted = JSON.stringify(data, null, 2);
+          bulkOutput.textContent = formatted;
+          copyBtn.disabled = false;
+        } catch (err) {
+          bulkOutput.textContent = `Hata: ${err.message}`;
+        } finally {
+          bulkBtn.disabled = false;
+        }
+      });
+
+      copyBtn.addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(bulkOutput.textContent || '');
+          copyBtn.textContent = 'Kopyalandı';
+          setTimeout(() => { copyBtn.textContent = 'Kopyala'; }, 1500);
+        } catch (e) {
+          copyBtn.textContent = 'Kopyalanamadı';
+          setTimeout(() => { copyBtn.textContent = 'Kopyala'; }, 1500);
+        }
+      });
+    </script>
+  </body>
+  </html>
+
