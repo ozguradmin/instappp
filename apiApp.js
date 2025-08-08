@@ -213,7 +213,7 @@ async function processWithConcurrency(items, worker, concurrency) {
 const apiApp = express();
 apiApp.use(express.json({ limit: '1mb' }));
 
-apiApp.get('/api/profile-photo', async (req, res) => {
+apiApp.get('/profile-photo', async (req, res) => {
   const username = normalizeInstagramUsername(req.query.username || '');
   if (!username) {
     return res.status(400).json({ error: 'username parametresi zorunlu' });
@@ -227,7 +227,7 @@ apiApp.get('/api/profile-photo', async (req, res) => {
   }
 });
 
-apiApp.post('/api/profile-photos', async (req, res) => {
+apiApp.post('/profile-photos', async (req, res) => {
   try {
     const raw = req.body && (req.body.usernames ?? req.body.text ?? '');
     let usernames = [];
@@ -273,7 +273,7 @@ apiApp.post('/api/profile-photos', async (req, res) => {
 });
 
 // Görsel proxy ucu
-apiApp.get('/api/profile-photo/image', async (req, res) => {
+apiApp.get('/profile-photo/image', async (req, res) => {
   const username = normalizeInstagramUsername(req.query.username || '');
   if (!username) {
     return res.status(400).json({ error: 'username parametresi zorunlu' });
