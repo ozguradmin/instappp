@@ -41,6 +41,23 @@
     </div>
 
     <script>
+      function apiBase() {
+        try {
+          const host = window.location && window.location.hostname;
+          if (host && host.endsWith('netlify.app')) return '/.netlify/functions/api';
+        } catch (_) {}
+        return '/api';
+      }
+
+      async function fetchJsonWithFallback(path, options) {
+        const first = await fetch(`/api${path}`, options);
+        if (first.ok) return { resp: first, data: await first.json() };
+        if (first.status === 404) {
+          const second = await fetch(`/.netlify/functions/api${path}`, options);
+          return { resp: second, data: await second.json() };
+        }
+        return { resp: first, data: await first.json().catch(() => ({})) };
+      }
       const form = document.getElementById('form');
       const usernameEl = document.getElementById('username');
       const result = document.getElementById('result');
@@ -57,10 +74,9 @@
         submit.disabled = true;
         result.innerHTML = 'Yükleniyor...';
         try {
-          const resp = await fetch(`/api/profile-photo?username=${encodeURIComponent(username)}`);
-          const data = await resp.json();
+          const { resp, data } = await fetchJsonWithFallback(`/profile-photo?username=${encodeURIComponent(username)}`);
           if (!resp.ok) throw new Error(data.error || 'Hata');
-          const proxyUrl = `/api/profile-photo/image?username=${encodeURIComponent(username)}`;
+          const proxyUrl = `${apiBase()}/profile-photo/image?username=${encodeURIComponent(username)}`;
           result.innerHTML = `
             <div>Görsel (proxy üzerinden):</div>
             <a href="${proxyUrl}" target="_blank" rel="noopener">Görseli aç</a>
@@ -83,12 +99,11 @@
         copyBtn.disabled = true;
         bulkOutput.textContent = 'İşleniyor... (liste uzunluğuna göre sürebilir)';
         try {
-          const resp = await fetch('/api/profile-photos', {
+          const { resp, data } = await fetchJsonWithFallback('/profile-photos', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ usernames: text })
           });
-          const data = await resp.json();
           if (!resp.ok) throw new Error(data.error || 'Hata');
           const formatted = JSON.stringify(data, null, 2);
           bulkOutput.textContent = formatted;
