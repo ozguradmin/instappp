@@ -101,12 +101,8 @@
         bulkOutput.textContent = 'İşleniyor... (liste uzunluğuna göre sürebilir)';
         try {
           const items = text.split(/[\s,;]+/).map(s => s.trim()).filter(Boolean);
-          const body = { usernames: items };
-          const { resp, data } = await fetchJsonWithFallback('/profile-photos', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body)
-          });
+          const qs = encodeURIComponent(items.join(','));
+          const { resp, data } = await fetchJsonWithFallback(`/profile-photos?usernames=${qs}`, { method: 'GET' });
           if (!resp.ok) throw new Error(data.error || 'Hata');
           const formatted = JSON.stringify(data, null, 2);
           bulkOutput.textContent = formatted;
