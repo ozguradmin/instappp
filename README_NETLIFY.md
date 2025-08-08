@@ -12,7 +12,7 @@ Adımlar
    - Functions directory: `netlify/functions`
 
 3) Deploy sonrası API uçları:
-   - Tekli: `https://<site>.netlify.app/api/profile-photo?username=meta`
+   - Tekli: `https://<site>.netlify.app/.netlify/functions/api/profile-photo?username=meta`
    - Görsel proxy: `https://<site>.netlify.app/api/profile-photo/image?username=meta`
    - Toplu: `POST https://<site>.netlify.app/api/profile-photos` body: `{ "usernames": "a,b,c" }`
 
