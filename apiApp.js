@@ -249,21 +249,24 @@ apiApp.post('/profile-photos', async (req, res) => {
     const startedAt = Date.now();
     const CONCURRENCY = 2; // Netlify üzerinde anti-bot riskini azaltmak için düşük tutuldu
 
-    const results = await processWithConcurrency(
-      trimmed,
-      async (username) => {
+    async function fetchWithRetries(username) {
+      const MAX_ATTEMPTS = 3;
+      let lastErr;
+      for (let i = 1; i <= MAX_ATTEMPTS; i += 1) {
         try {
           const url = await fetchInstagramProfilePicUrl(username);
           return { username, url };
         } catch (e) {
-          const status = e && Number.isInteger(e.status) ? e.status : undefined;
-          const statusCode = e && Number.isInteger(e.status) ? e.status : undefined;
-          const reason = e && e.message ? e.message : 'Hata';
-          return { username, error: reason, status: statusCode };
+          lastErr = e;
+          await new Promise(r => setTimeout(r, 250 * i));
         }
-      },
-      CONCURRENCY
-    );
+      }
+      const statusCode = lastErr && Number.isInteger(lastErr.status) ? lastErr.status : undefined;
+      const reason = lastErr && lastErr.message ? lastErr.message : 'Hata';
+      return { username, error: reason, status: statusCode };
+    }
+
+    const results = await processWithConcurrency(trimmed, fetchWithRetries, CONCURRENCY);
 
     const durationMs = Date.now() - startedAt;
     const success = results.filter((r) => r && r.url).length;
@@ -293,21 +296,24 @@ apiApp.get('/profile-photos', async (req, res) => {
     const startedAt = Date.now();
     const CONCURRENCY = 2; // Netlify üzerinde anti-bot riskini azaltmak için düşük tutuldu
 
-    const results = await processWithConcurrency(
-      trimmed,
-      async (username) => {
+    async function fetchWithRetries(username) {
+      const MAX_ATTEMPTS = 3;
+      let lastErr;
+      for (let i = 1; i <= MAX_ATTEMPTS; i += 1) {
         try {
           const url = await fetchInstagramProfilePicUrl(username);
           return { username, url };
         } catch (e) {
-          const status = e && Number.isInteger(e.status) ? e.status : undefined;
-          const statusCode = e && Number.isInteger(e.status) ? e.status : undefined;
-          const reason = e && e.message ? e.message : 'Hata';
-          return { username, error: reason, status: statusCode };
+          lastErr = e;
+          await new Promise(r => setTimeout(r, 250 * i));
         }
-      },
-      CONCURRENCY
-    );
+      }
+      const statusCode = lastErr && Number.isInteger(lastErr.status) ? lastErr.status : undefined;
+      const reason = lastErr && lastErr.message ? lastErr.message : 'Hata';
+      return { username, error: reason, status: statusCode };
+    }
+
+    const results = await processWithConcurrency(trimmed, fetchWithRetries, CONCURRENCY);
 
     const durationMs = Date.now() - startedAt;
     const success = results.filter((r) => r && r.url).length;

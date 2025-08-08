@@ -33,9 +33,12 @@
       <h2 style="margin:0 0 8px; font-size:18px;">Toplu Çek</h2>
       <div class="hint">Virgül ile ayır: örn. ozguradmin, merhaba321, kullanici2</div>
       <textarea id="bulkInput" rows="6" style="width:100%; margin-top:8px; padding:12px 14px; border:1px solid color-mix(in oklab, canvastext 20%, transparent); border-radius:10px; font-size:14px;" placeholder="kullanici1, kullanici2, ..."></textarea>
-      <div style="display:flex; gap:8px; margin-top:8px;">
+      <div style="display:flex; gap:8px; margin-top:8px; align-items:center; flex-wrap:wrap;">
         <button id="bulkBtn" type="button">Toplu Getir</button>
         <button id="copyBtn" type="button" disabled>Kopyala</button>
+        <label style="display:inline-flex; align-items:center; gap:6px; font-size:13px;">
+          <input type="checkbox" id="safeMode" /> Güvenli mod (yavaş)
+        </label>
       </div>
       <div id="bulkProgress" class="hint" style="margin-top:6px;"></div>
       <pre id="bulkOutput" style="white-space:pre-wrap; background: color-mix(in oklab, canvastext 3%, transparent); border:1px dashed color-mix(in oklab, canvastext 18%, transparent); border-radius:12px; padding:12px; margin-top:12px; max-height:360px; overflow:auto;"></pre>
@@ -106,28 +109,46 @@
         try {
           const items = Array.from(new Set(text.split(/[\s,;]+/).map(s => s.trim()).filter(Boolean)));
           const total = items.length;
-          const CHUNK_SIZE = 10;
+          const safeMode = document.getElementById('safeMode').checked;
+          const CHUNK_SIZE = safeMode ? 3 : 5;
           const aggregated = [];
           let processed = 0;
 
           for (let i = 0; i < items.length; i += CHUNK_SIZE) {
             const chunk = items.slice(i, i + CHUNK_SIZE);
-            const qs = encodeURIComponent(chunk.join(','));
-            const { resp, data } = await fetchJsonWithFallback(`/profile-photos?usernames=${qs}`, { method: 'GET' });
-            if (resp.ok && data && Array.isArray(data.results)) {
-              aggregated.push(...data.results);
-            } else {
-              // İstek başarısızsa bu parçadaki herkesi hata olarak işaretle
-              aggregated.push(...chunk.map(u => ({ username: u, error: (data && data.error) || 'Hata' })));
+            let pending = [...chunk];
+            let collected = [];
+
+            const MAX_ATTEMPTS = safeMode ? 3 : 2;
+            for (let attempt = 1; attempt <= MAX_ATTEMPTS && pending.length > 0; attempt++) {
+              const qs = encodeURIComponent(pending.join(','));
+              const { resp, data } = await fetchJsonWithFallback(`/profile-photos?usernames=${qs}`, { method: 'GET' });
+              if (resp.ok && data && Array.isArray(data.results)) {
+                // Başarılılar toplanır, hatalılar bir sonraki denemeye kalır
+                const successNow = data.results.filter(r => r && r.url);
+                const failedNow = data.results.filter(r => !(r && r.url));
+                collected.push(...successNow);
+                pending = failedNow.map(r => r.username);
+              } else {
+                // Tam parça hatası: hepsini pending bırak, sadece bir deneme daha yap
+              }
+              if (pending.length > 0) await sleep(safeMode ? 600 : 350);
             }
-            processed = Math.min(total, i + CHUNK_SIZE);
+
+            // Kalan başarısızlar hata olarak eklensin
+            if (pending.length > 0) {
+              collected.push(...pending.map(u => ({ username: u, error: 'Çoklu denemeye rağmen başarısız' })));
+            }
+
+            aggregated.push(...collected);
+            processed = Math.min(total, i + chunk.length);
             const success = aggregated.filter(r => r && r.url).length;
             const failed = aggregated.length - success;
             progress.textContent = `${processed}/${total} işlendi • Başarılı: ${success} • Hatalı: ${failed}`;
             bulkOutput.textContent = JSON.stringify({ results: aggregated, meta: { total: aggregated.length, success, failed } }, null, 2);
             copyBtn.disabled = aggregated.length === 0;
             // Anti-bot riskini azaltmak için küçük bekleme
-            await sleep(200);
+            await sleep(safeMode ? 500 : 200);
           }
           // Tüm parçalar bitti
           progress.textContent = `${processed}/${total} tamamlandı`;
