@@ -272,6 +272,48 @@ apiApp.post('/profile-photos', async (req, res) => {
   }
 });
 
+// GET ile de toplu çalıştırma: /profile-photos?usernames=a,b,c
+apiApp.get('/profile-photos', async (req, res) => {
+  try {
+    const raw = req.query.usernames || '';
+    const usernames = String(raw)
+      .split(/[\s,;]+/)
+      .map((s) => normalizeInstagramUsername(s))
+      .filter(Boolean);
+    if (usernames.length === 0) {
+      return res.json({ results: [], meta: { total: 0, success: 0, failed: 0, durationMs: 0 } });
+    }
+
+    const unique = Array.from(new Set(usernames));
+    const MAX = 2000;
+    const trimmed = unique.slice(0, MAX);
+
+    const startedAt = Date.now();
+    const CONCURRENCY = 6;
+
+    const results = await processWithConcurrency(
+      trimmed,
+      async (username) => {
+        try {
+          const url = await fetchInstagramProfilePicUrl(username);
+          return { username, url };
+        } catch (e) {
+          const status = e && Number.isInteger(e.status) ? e.status : undefined;
+          return { username, error: e && e.message ? e.message : 'Hata', status };
+        }
+      },
+      CONCURRENCY
+    );
+
+    const durationMs = Date.now() - startedAt;
+    const success = results.filter((r) => r && r.url).length;
+    const failed = results.length - success;
+    return res.json({ results, meta: { total: results.length, success, failed, durationMs } });
+  } catch (err) {
+    return res.status(500).json({ error: err.message || 'Bilinmeyen hata' });
+  }
+});
+
 // Görsel proxy ucu
 apiApp.get('/profile-photo/image', async (req, res) => {
   const username = normalizeInstagramUsername(req.query.username || '');

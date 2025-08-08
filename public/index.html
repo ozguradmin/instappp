@@ -100,7 +100,8 @@
         copyBtn.disabled = true;
         bulkOutput.textContent = 'İşleniyor... (liste uzunluğuna göre sürebilir)';
         try {
-          const body = /[,;\s]/.test(text) ? { usernames: text } : { usernames: [text] };
+          const items = text.split(/[\s,;]+/).map(s => s.trim()).filter(Boolean);
+          const body = { usernames: items };
           const { resp, data } = await fetchJsonWithFallback('/profile-photos', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
