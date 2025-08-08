@@ -247,7 +247,7 @@ apiApp.post('/profile-photos', async (req, res) => {
     const trimmed = unique.slice(0, MAX);
 
     const startedAt = Date.now();
-    const CONCURRENCY = 6;
+    const CONCURRENCY = 2; // Netlify üzerinde anti-bot riskini azaltmak için düşük tutuldu
 
     const results = await processWithConcurrency(
       trimmed,
@@ -289,7 +289,7 @@ apiApp.get('/profile-photos', async (req, res) => {
     const trimmed = unique.slice(0, MAX);
 
     const startedAt = Date.now();
-    const CONCURRENCY = 6;
+    const CONCURRENCY = 2; // Netlify üzerinde anti-bot riskini azaltmak için düşük tutuldu
 
     const results = await processWithConcurrency(
       trimmed,
