@@ -280,6 +280,11 @@ apiApp.get('/profile-photo/image', async (req, res) => {
   }
   try {
     const imageUrl = await fetchInstagramProfilePicUrl(username);
+    // Netlify/Serverless ortamlarında akış (stream) cevapları sorun çıkarabildiği için
+    // doğrudan kaynak görsele yönlendirelim
+    if (process.env.NETLIFY || process.env.AWS_LAMBDA_FUNCTION_NAME) {
+      return res.redirect(imageUrl);
+    }
     try {
       const upstream = await axios.get(imageUrl, {
         responseType: 'stream',
