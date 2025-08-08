@@ -13,6 +13,23 @@ class HttpError extends Error {
   }
 }
 
+function wrapWithScraperIfConfigured(rawUrl) {
+  try {
+    const url = String(rawUrl);
+    if (process.env.SCRAPERAPI_KEY) {
+      const qs = new URLSearchParams({ api_key: process.env.SCRAPERAPI_KEY, url, country: 'us' });
+      return `https://api.scraperapi.com/?${qs.toString()}`;
+    }
+    if (process.env.SCRAPINGBEE_KEY) {
+      const qs = new URLSearchParams({ api_key: process.env.SCRAPINGBEE_KEY, url, render_js: 'false', premium_proxy: 'true', country_code: 'us' });
+      return `https://app.scrapingbee.com/api/v1/?${qs.toString()}`;
+    }
+    return url;
+  } catch (_) {
+    return rawUrl;
+  }
+}
+
 function normalizeInstagramUsername(raw) {
   if (!raw) return '';
   let s = String(raw).trim();
@@ -29,7 +46,8 @@ function normalizeInstagramUsername(raw) {
 }
 
 async function fetchViaInstagramWebApi(username) {
-  const apiUrl = `https://i.instagram.com/api/v1/users/web_profile_info/?username=${encodeURIComponent(username)}`;
+  const directApiUrl = `https://i.instagram.com/api/v1/users/web_profile_info/?username=${encodeURIComponent(username)}`;
+  const apiUrl = wrapWithScraperIfConfigured(directApiUrl);
   const resp = await axios.get(apiUrl, {
     headers: {
       'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
@@ -37,7 +55,7 @@ async function fetchViaInstagramWebApi(username) {
       'Accept': 'application/json, text/plain, */*',
       'Accept-Language': 'tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7'
     },
-    timeout: 10000,
+    timeout: 15000,
     validateStatus: () => true,
   });
 
@@ -75,7 +93,8 @@ async function fetchInstagramProfilePicUrl(username) {
   }
 
   // Instagram profil sayfasını çek (Googlebot UA ile)
-  const profileUrl = `https://www.instagram.com/${encodeURIComponent(username)}/`;
+  const directProfileUrl = `https://www.instagram.com/${encodeURIComponent(username)}/`;
+  const profileUrl = wrapWithScraperIfConfigured(directProfileUrl);
   const resp = await axios.get(profileUrl, {
     headers: {
       'User-Agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Mobile Safari/537.36',
@@ -123,12 +142,13 @@ async function fetchInstagramProfilePicUrl(username) {
 
   // 4) r.jina.ai üzerinden Instagram Web API'yi dene (proxy)
   try {
-    const proxyApiUrl = `https://r.jina.ai/http://i.instagram.com/api/v1/users/web_profile_info/?username=${encodeURIComponent(username)}`;
-    const proxyResp = await axios.get(proxyApiUrl, {
+    const proxyDirectApiUrl = `http://i.instagram.com/api/v1/users/web_profile_info/?username=${encodeURIComponent(username)}`;
+    const proxyApiUrl = `https://r.jina.ai/${proxyDirectApiUrl}`;
+    const proxyResp = await axios.get(wrapWithScraperIfConfigured(proxyApiUrl), {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Mobile Safari/537.36'
       },
-      timeout: 12000,
+      timeout: 15000,
       responseType: 'text',
       validateStatus: () => true,
     });
@@ -152,12 +172,13 @@ async function fetchInstagramProfilePicUrl(username) {
 
   // 5) r.jina.ai üzerinden HTML metni çekip regex ile ara
   try {
-    const proxyHtmlUrl = `https://r.jina.ai/http://www.instagram.com/${encodeURIComponent(username)}/`;
-    const proxyHtmlResp = await axios.get(proxyHtmlUrl, {
+    const proxyDirectHtmlUrl = `http://www.instagram.com/${encodeURIComponent(username)}/`;
+    const proxyHtmlUrl = `https://r.jina.ai/${proxyDirectHtmlUrl}`;
+    const proxyHtmlResp = await axios.get(wrapWithScraperIfConfigured(proxyHtmlUrl), {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Mobile Safari/537.36'
       },
-      timeout: 12000,
+      timeout: 15000,
       responseType: 'text',
       validateStatus: () => true,
     });

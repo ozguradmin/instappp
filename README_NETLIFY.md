@@ -19,5 +19,7 @@ Adımlar
 Notlar:
 - Instagram kaynakları zaman zaman 401/antibot dönebilir. Kod, Googlebot UA ve alternatif proxy stratejisiyle CDN `og:image` elde etmeye çalışır.
 - Netlify Functions Node 18+ üzerinde çalışır; bağımlılıklar `package.json` içindedir.
+ - İsteğe bağlı anti-bot proxy desteği:
+   - `SCRAPERAPI_KEY` veya `SCRAPINGBEE_KEY` ortam değişkenini Netlify → Site settings → Environment → Variables altına ekleyin. Varsa istekler bu proxy üzerinden geçer ve bloklanma ciddi oranda düşer.
 
 
