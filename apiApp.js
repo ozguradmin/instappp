@@ -78,10 +78,10 @@ async function fetchInstagramProfilePicUrl(username) {
   const profileUrl = `https://www.instagram.com/${encodeURIComponent(username)}/`;
   const resp = await axios.get(profileUrl, {
     headers: {
-      'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)',
+      'User-Agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Mobile Safari/537.36',
       'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
       'Accept-Language': 'en-US,en;q=0.7,tr-TR;q=0.6,tr;q=0.5',
-      'Referer': 'https://www.google.com/'
+      'Referer': 'https://www.instagram.com/'
     },
     validateStatus: () => true,
   });
@@ -126,9 +126,9 @@ async function fetchInstagramProfilePicUrl(username) {
     const proxyApiUrl = `https://r.jina.ai/http://i.instagram.com/api/v1/users/web_profile_info/?username=${encodeURIComponent(username)}`;
     const proxyResp = await axios.get(proxyApiUrl, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
+        'User-Agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Mobile Safari/537.36'
       },
-      timeout: 10000,
+      timeout: 12000,
       responseType: 'text',
       validateStatus: () => true,
     });
@@ -155,9 +155,9 @@ async function fetchInstagramProfilePicUrl(username) {
     const proxyHtmlUrl = `https://r.jina.ai/http://www.instagram.com/${encodeURIComponent(username)}/`;
     const proxyHtmlResp = await axios.get(proxyHtmlUrl, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
+        'User-Agent': 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Mobile Safari/537.36'
       },
-      timeout: 10000,
+      timeout: 12000,
       responseType: 'text',
       validateStatus: () => true,
     });
@@ -257,7 +257,9 @@ apiApp.post('/profile-photos', async (req, res) => {
           return { username, url };
         } catch (e) {
           const status = e && Number.isInteger(e.status) ? e.status : undefined;
-          return { username, error: e && e.message ? e.message : 'Hata', status };
+          const statusCode = e && Number.isInteger(e.status) ? e.status : undefined;
+          const reason = e && e.message ? e.message : 'Hata';
+          return { username, error: reason, status: statusCode };
         }
       },
       CONCURRENCY
@@ -299,7 +301,9 @@ apiApp.get('/profile-photos', async (req, res) => {
           return { username, url };
         } catch (e) {
           const status = e && Number.isInteger(e.status) ? e.status : undefined;
-          return { username, error: e && e.message ? e.message : 'Hata', status };
+          const statusCode = e && Number.isInteger(e.status) ? e.status : undefined;
+          const reason = e && e.message ? e.message : 'Hata';
+          return { username, error: reason, status: statusCode };
         }
       },
       CONCURRENCY
